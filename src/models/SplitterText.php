@@ -2,15 +2,33 @@
 namespace kilyakus\package\splitter\models;
 
 use Yii;
+use kilyakus\package\gui\behaviors\GuiBehavior;
+use kilyakus\package\translate\behaviors\TranslateBehavior;
 use kilyakus\validator\escape\EscapeValidator;
+use bin\admin\models\Photo;
 
-class JumperText extends \kilyakus\modules\components\ActiveRecord
+class SplitterText extends \kilyakus\modules\components\ActiveRecord
 {
-    public $translations = [];
+    public $splitter = [];
+
+    public $module;
 
     public static function tableName()
     {
         return 'splittertext';
+    }
+
+    public function behaviors()
+    {
+        return [
+            'guiBehavior' => [
+                'class' => GuiBehavior::className(),
+                'model' => Photo::className(),
+                'isRoot' => IS_MODER,
+                'identity' => Yii::$app->user->identity->id,
+            ],
+            // 'translateBehavior' => TranslateBehavior::className(),
+        ];
     }
 
     public function rules()

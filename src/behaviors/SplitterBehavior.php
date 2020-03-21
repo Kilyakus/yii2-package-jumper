@@ -1,11 +1,11 @@
 <?php
-namespace kilyakus\package\translate\behaviors;
+namespace kilyakus\package\splitter\behaviors;
 
 use Yii;
 use yii\db\ActiveRecord;
-use kilyakus\package\translate\models\JumperText;
+use kilyakus\package\splitter\models\SplitterText;
 
-class JumperBehavior extends \yii\base\Behavior
+class SplitterBehavior extends \yii\base\Behavior
 {
     private $_model;
 
@@ -22,87 +22,61 @@ class JumperBehavior extends \yii\base\Behavior
 
     public function beforeInsert()
     {
-        self::beforeJumper();
+        self::beforeSplitter();
     }
 
     public function afterInsert()
     {
-        self::afterJumper();
+        self::afterSplitter();
     }
 
     public function beforeUpdate()
     {
-        self::beforeJumper();
+        self::beforeSplitter();
     }
 
     public function afterUpdate()
     {
-        self::afterJumper();
+        self::afterSplitter();
     }
 
-    public function beforeJumper()
+    public function beforeSplitter()
     {
-        if($this->translateText->load(Yii::$app->request->post())){
+        // if($this->splitterText->load(Yii::$app->request->post())){
 
-            if($post = Yii::$app->request->post('JumperText')['translations']){
+        //     if($post = Yii::$app->request->post('SplitterText')['splitter']){
 
-                $current = $post[Yii::$app->language];
-
-                if($current['title']){$this->owner->title = $current['title'];}
-                if($current['short']){$this->owner->short = $current['short'];}
-                if($current['text']){$this->owner->text = $current['text'];}
-                if($current['description']){$this->owner->description = $current['description'];}
-
-                foreach ($post as $lang => $translation)
-                {
-
-                    if(empty($current['title']) && !empty($translation['title'])){
-                        $this->owner->title = $translation['title'];
-                    }
-
-                    if(empty($current['short']) && !empty($translation['short'])){
-                        $this->owner->short = $translation['short'];
-                    }
-
-                    if(empty($current['text']) && !empty($translation['text'])){
-                        $this->owner->text = $translation['text'];
-                    }
-
-                    if(empty($current['description']) && !empty($translation['description'])){
-                        $this->owner->description = $translation['description'];
-                    }
-                }
-            }
-        }
+        //     }
+        // }
     }
 
-    public function afterJumper()
+    public function afterSplitter()
     {
-        if($this->translateText->load(Yii::$app->request->post())){
+        if($this->splitterText->load(Yii::$app->request->post())){
 
-            if($post = Yii::$app->request->post('JumperText')['translations']){
+            if($post = Yii::$app->request->post('SplitterText')['splitter']){
 
-                foreach ($post as $lang => $translation)
+                $ownerClass = $this->owner;
+
+                foreach ($post as $splitterKey => $data)
                 {
-                    if(!$translate = JumperText::find()->where(['class' => $this->owner::className(), 'item_id' => $this->owner->primaryKey, 'lang' => $lang])->one()){
-                        $translate = new JumperText();
+                    if($data['title'] || $data['short'] || $data['text'] || $data['description']){
+                        if($splitterKey == 0 || !($splitter = SplitterText::find()->where(['splittertext_id' => $splitterKey, 'class' => $ownerClass::className(), 'item_id' => $this->owner->primaryKey])->one())){
+                            $splitter = new SplitterText();
+                        }
+                        $splitter->load(['SplitterText' => $data]);
+                        $splitter->class = $ownerClass::className();
+                        $splitter->item_id = $this->owner->primaryKey;
+                        $splitter->save();
                     }
-
-                    $translate->load(['JumperText' => $translation]);
-                    $translate->class = $this->owner::className();
-                    $translate->item_id = $this->owner->primaryKey;
-                    $translate->lang = $lang;
-                    $translate->save();
-            
                 }
 
-                foreach ($post as $lang => $translation)
+                foreach ($post as $splitterKey => $data)
                 {
-                    $translate = JumperText::find()->where(['class' => $this->owner::className(), 'item_id' => $this->owner->primaryKey, 'lang' => $lang])->one();
-                    
-                    if($translate && !$translation['title'] && isset($this->owner->title)){
-                        $translate->title = $this->owner->title;
-                        $translate->update();
+                    $splitter = SplitterText::find()->where(['splittertext_id' => $splitterKey, 'class' => $ownerClass::className(), 'item_id' => $this->owner->primaryKey])->one();
+
+                    if($splitter && (empty($data['short']) && empty($data['text']) && empty($data['description'])) || $splitter && empty($data['title'])){
+                        $splitter->delete();
                     }
                 }
             }
@@ -111,30 +85,29 @@ class JumperBehavior extends \yii\base\Behavior
 
     public function afterDelete()
     {
-        JumperText::deleteAll(['class' => get_class($this->owner), 'item_id' => $this->owner->primaryKey]);
+        SplitterText::deleteAll(['class' => get_class($this->owner), 'item_id' => $this->owner->primaryKey]);
     }
 
-    public function getJumper()
+    public function getSplitter()
     {
-        $translate = $this->owner->hasOne(JumperText::className(), ['item_id' => $this->owner->primaryKey()[0]])->where(['class' => get_class($this->owner), 'lang' => Yii::$app->language]);
+        $splitter = $this->owner->hasOne(SplitterText::className(), ['item_id' => $this->owner->primaryKey()[0]])->where(['class' => get_class($this->owner)]);
 
-        if(!$translate->one()){
-            $translate = $this->owner;
+        if(!$splitter->one()){
+            $splitter = $this->owner;
         }
 
-        return $translate;
+        return $splitter;
     }
 
-    public function getJumperText()
+    public function getSplitterText()
     {
         if(!$this->_model)
         {
-            $this->_model = $this->owner->translate;
+            $this->_model = $this->owner->splitter;
             if(!$this->_model){
-                $this->_model = new JumperText([
+                $this->_model = new SplitterText([
                     'class' => get_class($this->owner),
                     'item_id' => $this->owner->primaryKey,
-                    'lang' => Yii::$app->language
                 ]);
             }
         }

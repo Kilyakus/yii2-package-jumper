@@ -10,7 +10,8 @@
     ],
     "require": {
         "yiisoft/yii2": ">=2.0.0",
-        "kilyakus/yii2-validator-escape": "*"
+        "kilyakus/yii2-validator-escape": "*",
+        "kilyakus/yii2-widget-flag": "*"
     },
     "autoload": {
         "psr-4": {
